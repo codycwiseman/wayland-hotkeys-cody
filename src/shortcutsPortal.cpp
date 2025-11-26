@@ -112,10 +112,12 @@ void ShortcutsPortal::createShortcuts()
         [](void* data, obs_hotkey_id id, obs_hotkey_t* binding) {
             auto t = static_cast<ShortcutsPortal*>(data);
 
-            auto name = obs_hotkey_get_name(binding);
             auto description = obs_hotkey_get_description(binding);
 
-            t->createShortcut(name, description, [id](bool pressed) {
+            // Use the unique ID as the key to avoid collisions (e.g. scenes share the same name)
+            QString uniqueId = QString::number(id);
+
+            t->createShortcut(qPrintable(uniqueId), description, [id](bool pressed) {
                 obs_hotkey_trigger_routed_callback(id, pressed);
             });
 
