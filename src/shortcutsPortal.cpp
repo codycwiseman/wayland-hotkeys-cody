@@ -312,7 +312,7 @@ QString ShortcutsPortal::getWindowId()
 {
     // copied from https://invent.kde.org/plasma/plasma-integration/-/blob/20581c0be9357afe052fda94c62c065d298455d9/qt6/src/platformtheme/kioopenwith.cpp#L60-71
     QString windowId;
-    QWindow* window = m_parentWindow ? m_parentWindow->window() : nullptr;
+    QWidget* window = m_parentWindow ? m_parentWindow->window() : nullptr;
 
     if (!window) {
         // Return an empty ID if the window is not available to prevent crashes.
