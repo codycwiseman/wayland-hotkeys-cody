@@ -369,7 +369,7 @@ ShortcutsPortal::~ShortcutsPortal()
         globalShortcutsInterface,
         u"Deactivated"_s,
         this,
-        SLOT(onActivatedSignal(
+        SLOT(onDeactivatedSignal(
             QDBusObjectPath, QString, qulonglong, QVariantMap
         ))
     );
