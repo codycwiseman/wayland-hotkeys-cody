@@ -312,14 +312,22 @@ QString ShortcutsPortal::getWindowId()
 {
     // copied from https://invent.kde.org/plasma/plasma-integration/-/blob/20581c0be9357afe052fda94c62c065d298455d9/qt6/src/platformtheme/kioopenwith.cpp#L60-71
     QString windowId;
-    m_parentWindow->window()->winId(); // ensure we have a handle so we can export a window (without this windowHandle() may be null)
+    QWindow* window = m_parentWindow ? m_parentWindow->window() : nullptr;
+
+    if (!window) {
+        // Return an empty ID if the window is not available to prevent crashes.
+        return QString();
+    }
+
+    window->winId(); // ensure we have a handle so we can export a window (without this windowHandle() may be null)
+
     auto services = QGuiApplicationPrivate::platformIntegration()->services();
 #if QT_VERSION >= QT_VERSION_CHECK(6, 9, 0)
     if (auto unixServices = dynamic_cast<QDesktopUnixServices*>(services)) {
 #else
     if (auto unixServices = dynamic_cast<QGenericUnixServices*>(services)) {
 #endif
-        windowId = unixServices->portalWindowIdentifier(m_parentWindow->window()->windowHandle());
+        windowId = unixServices->portalWindowIdentifier(window->windowHandle());
     }
 
     return windowId;
