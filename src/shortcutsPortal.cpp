@@ -22,6 +22,7 @@
 #include <obs-hotkey.h>
 #include <obs.h>
 
+#include <QCryptographicHash>
 #include <QMessageBox>
 #include <QRegularExpression>
 #include <QWindow>
@@ -222,8 +223,8 @@ void ShortcutsPortal::createShortcuts()
         if (qName.isEmpty())
             continue;
 
-        QString id = "scene_" + qName;
-        id.replace(QRegularExpression(u"[^a-zA-Z0-9_]"_s), u"_"_s);
+        // Use MD5 hash of the scene name to generate a unique, stable, alphanumeric ID
+        QString id = "scene_" + QCryptographicHash::hash(qName.toUtf8(), QCryptographicHash::Md5).toHex();
 
         QString description = "Switch to scene '" + qName + "'";
 
