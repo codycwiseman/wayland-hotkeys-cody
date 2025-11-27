@@ -95,10 +95,10 @@ int ShortcutsPortal::getVersion()
 void ShortcutsPortal::createShortcut(
     const QString& name,
     const QString& description,
-    const std::function<void(bool pressed)>& callback
+    const std::function<void(bool)>& callbackFunc
 )
 {
-    m_shortcuts[name] = PortalShortcut{name, description, callback};
+    m_shortcuts[name] = PortalShortcut{name, description, callbackFunc};
 }
 
 void ShortcutsPortal::createShortcuts()
@@ -223,7 +223,7 @@ void ShortcutsPortal::createShortcuts()
     obs_frontend_source_list_free(&scenes);
 }
 
-void ShortcutsPortal::onCreateSessionResponse(uint, const QVariantMap& results)
+void ShortcutsPortal::onCreateSessionResponse(unsigned int, const QVariantMap& results)
 {
     if (results.contains(u"session_handle"_s)) {
         QString sessionHandle = results[u"session_handle"_s].toString();
@@ -273,7 +273,7 @@ void ShortcutsPortal::onActivatedSignal(
 )
 {
     if (m_shortcuts.contains(shortcutName)) {
-        m_shortcuts[shortcutName].callback(true);
+        m_shortcuts[shortcutName].callbackFunc(true);
     }
 }
 
@@ -285,7 +285,7 @@ void ShortcutsPortal::onDeactivatedSignal(
 )
 {
     if (m_shortcuts.contains(shortcutName)) {
-        m_shortcuts[shortcutName].callback(false);
+        m_shortcuts[shortcutName].callbackFunc(false);
     }
 }
 

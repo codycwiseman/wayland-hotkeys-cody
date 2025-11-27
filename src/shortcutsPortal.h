@@ -30,7 +30,7 @@ struct PortalShortcut
     QString name;
     QString description;
 
-    std::function<void(bool pressed)> callback;
+    std::function<void(bool)> callbackFunc;
 };
 
 class ShortcutsPortal : public QObject
@@ -49,7 +49,7 @@ public:
     void createShortcut(
         const QString& name,
         const QString& description,
-        const std::function<void(bool pressed)>& callback
+        const std::function<void(bool)>& callbackFunc
     );
 
     void createShortcuts();
@@ -60,7 +60,7 @@ public:
     }
 
 public Q_SLOTS:
-    void onCreateSessionResponse(uint response, const QVariantMap& results);
+    void onCreateSessionResponse(unsigned int response, const QVariantMap& results);
 
     void onActivatedSignal(
         const QDBusObjectPath& sessionHandle,
