@@ -72,7 +72,7 @@ void ShortcutsPortal::createSession()
     this->m_responseHandle = call.arguments().first().value<QDBusObjectPath>();
 
     qDBusRegisterMetaType<std::pair<QString, QVariantMap>>();
-    qDBusRegisterMetaType<QList<std::pair<QString, QVariantMap>>>();
+    qDBusRegisterMetaType<QList<QPair<QString, QVariantMap>>>();
 
     QDBusConnection::sessionBus().connect(
         freedesktopDest,
@@ -97,16 +97,20 @@ int ShortcutsPortal::getVersion()
     QDBusMessage reply = QDBusConnection::sessionBus().call(message);
     auto version = reply.arguments().first().value<QDBusVariant>().variant().toUInt();
     return version;
-}
+};
 
 void ShortcutsPortal::createShortcut(
-    const QString& name,
-    const QString& description,
-    const std::function<void(bool)>& callbackFunc
+    const char* name,
+    const char* description,
+    const std::function<void(bool pressed)>& callback
 )
 {
-    m_shortcuts[name] = {name, description, callbackFunc};
-}
+    m_shortcuts[name] = {
+        .name = name,
+        .description = description,
+        .callback = callback
+    };
+};
 
 void ShortcutsPortal::createShortcuts()
 {
@@ -140,13 +144,13 @@ void ShortcutsPortal::createShortcuts()
     obs_enum_hotkeys(
         [](void* data, obs_hotkey_id id, obs_hotkey_t* binding) {
             auto* ctx = static_cast<EnumContext*>(data);
-            
+
             const char* nameStr = obs_hotkey_get_name(binding);
             QString qNameStr = nameStr ? QString::fromUtf8(nameStr) : QString();
 
             // Filter out internal scene switching and scene item visibility toggles
-            if (qNameStr == u"OBSBasic.SelectScene"_s || 
-                qNameStr.contains(u"show_scene_item"_s) || 
+            if (qNameStr == u"OBSBasic.SelectScene"_s ||
+                qNameStr.contains(u"show_scene_item"_s) ||
                 qNameStr.contains(u"hide_scene_item"_s)) {
                 return true;
             }
@@ -178,7 +182,7 @@ void ShortcutsPortal::createShortcuts()
                 } else if (type == OBS_HOTKEY_REGISTERER_SERVICE) {
                     name = obs_service_get_name(static_cast<obs_service_t*>(registerer));
                 }
-                
+
                 if (name) {
                     namePrefix = QString::fromUtf8(name);
                 }
@@ -206,7 +210,7 @@ void ShortcutsPortal::createShortcuts()
         },
         &ctx
     );
-    
+
     // KDE and Gnome don't allow binding multiple key combinations to the same action like obs does...
     // so add custom "toggle" shortcuts for actions that can be started / stopped
 

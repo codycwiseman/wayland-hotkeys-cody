@@ -29,7 +29,7 @@ struct PortalShortcut
     QString name;
     QString description;
 
-    std::function<void(bool)> callbackFunc;
+    std::function<void(bool pressed)> callbackFunc;
 };
 
 class ShortcutsPortal : public QObject
@@ -47,9 +47,9 @@ public:
     void configureShortcuts();
 
     void createShortcut(
-        const QString& name,
-        const QString& description,
-        const std::function<void(bool)>& callbackFunc
+        const char* name,
+        const char* description,
+        const std::function<void(bool pressed)>& callbackFunc
     );
 
     void createShortcuts();
