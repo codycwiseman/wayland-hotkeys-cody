@@ -47,8 +47,8 @@ public:
     void configureShortcuts();
 
     void createShortcut(
-        const char* name,
-        const char* description,
+        const QString& name,
+        const QString& description,
         const std::function<void(bool pressed)>& callbackFunc
     );
 

@@ -88,7 +88,7 @@ int ShortcutsPortal::getVersion()
 {
     QDBusMessage message = QDBusMessage::createMethodCall(
         freedesktopDest,
-        freedesdesktopPath,
+        freedesktopPath,
         u"org.freedesktop.DBus.Properties"_s,
         u"Get"_s
     );
@@ -100,16 +100,17 @@ int ShortcutsPortal::getVersion()
 };
 
 void ShortcutsPortal::createShortcut(
-    const char* name,
-    const char* description,
+    const QString& name,
+    const QString& description,
     const std::function<void(bool pressed)>& callback
 )
 {
-    m_shortcuts[name] = {
-        .name = name,
-        .description = description,
-        .callback = callback
-    };
+    PortalShortcut shortcut;
+    shortcut.name = name;
+    shortcut.description = description;
+    shortcut.callbackFunc = callback;
+
+    m_shortcuts[name] = shortcut;
 };
 
 void ShortcutsPortal::createShortcuts()
