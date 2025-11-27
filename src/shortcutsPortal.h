@@ -19,6 +19,7 @@
 #pragma once
 
 #include <QMainWindow>
+#include <QSet>
 #include <QtDBus/QtDBus>
 #include <functional>
 #include <obs-frontend-api.h>
@@ -91,4 +92,5 @@ private:
     QDBusObjectPath m_sessionObjPath;
 
     bool m_isLoaded = false;
+    void* m_currentValidSources = nullptr;
 };

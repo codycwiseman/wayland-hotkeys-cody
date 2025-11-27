@@ -25,6 +25,7 @@
 #include <QCryptographicHash>
 #include <QMessageBox>
 #include <QRegularExpression>
+#include <QSet>
 #include <QWindow>
 
 #if QT_VERSION >= QT_VERSION_CHECK(6, 9, 0)
@@ -116,69 +117,82 @@ void ShortcutsPortal::createShortcuts()
     blog(LOG_INFO, "[ShortcutsPortal] Re-creating shortcuts list...");
     m_shortcuts.clear();
 
+    // Collect valid source pointers to ensure safety
+    QSet<void*> validSources;
+    obs_enum_sources([](void* data, obs_source_t* source) {
+        auto* set = static_cast<QSet<void*>*>(data);
+        set->insert(static_cast<void*>(source));
+
+        // Also add filters for this source
+        obs_source_enum_filters(source, [](obs_source_t*, obs_source_t* filter, void* p) {
+            auto* s = static_cast<QSet<void*>*>(p);
+            s->insert(static_cast<void*>(filter));
+        }, set);
+
+        return true;
+    }, &validSources);
+
+    // Store a pointer to the valid sources set temporarily for the hotkey enumeration callback
+    m_currentValidSources = &validSources;
+
     obs_enum_hotkeys(
         [](void* data, obs_hotkey_id id, obs_hotkey_t* binding) {
             auto t = static_cast<ShortcutsPortal*>(data);
-
-            blog(LOG_INFO, "[ShortcutsPortal] Enumerating hotkey ID: %lu", (unsigned long)id);
+            auto* validSources = static_cast<QSet<void*>*>(t->m_currentValidSources);
 
             const char* descStr = obs_hotkey_get_description(binding);
             QString description = descStr ? QString::fromUtf8(descStr) : QString();
-            blog(LOG_INFO, "[ShortcutsPortal] Hotkey ID %lu - Initial description: '%s'", (unsigned long)id, description.toUtf8().constData());
 
             if (description.isEmpty()) {
                  const char* nameStr = obs_hotkey_get_name(binding);
                  description = nameStr ? QString::fromUtf8(nameStr) : "Unknown Hotkey";
-                 blog(LOG_INFO, "[ShortcutsPortal] Hotkey ID %lu - Description was empty, using name: '%s'", (unsigned long)id, description.toUtf8().constData());
             }
 
             QString namePrefix;
             obs_hotkey_registerer_type type = obs_hotkey_get_registerer_type(binding);
             void* registerer = obs_hotkey_get_registerer(binding);
-            blog(LOG_INFO, "[ShortcutsPortal] Hotkey ID %lu - Registerer Type: %d, Pointer: %p", (unsigned long)id, (int)type, registerer);
 
             if (registerer) {
                 const char* name = nullptr;
                 if (type == OBS_HOTKEY_REGISTERER_SOURCE) {
-                    name = obs_source_get_name(static_cast<obs_source_t*>(registerer));
-                    blog(LOG_INFO, "[ShortcutsPortal] Hotkey ID %lu - Registerer is SOURCE, name: %s", (unsigned long)id, name ? name : "nullptr");
+                    // Only access the source if we verified it exists
+                    if (validSources && validSources->contains(registerer)) {
+                        name = obs_source_get_name(static_cast<obs_source_t*>(registerer));
+                    } else {
+                        blog(LOG_WARNING, "[ShortcutsPortal] Skipping invalid source pointer for hotkey ID %lu", (unsigned long)id);
+                    }
                 } else if (type == OBS_HOTKEY_REGISTERER_OUTPUT) {
                     name = obs_output_get_name(static_cast<obs_output_t*>(registerer));
-                    blog(LOG_INFO, "[ShortcutsPortal] Hotkey ID %lu - Registerer is OUTPUT, name: %s", (unsigned long)id, name ? name : "nullptr");
                 } else if (type == OBS_HOTKEY_REGISTERER_ENCODER) {
                     name = obs_encoder_get_name(static_cast<obs_encoder_t*>(registerer));
-                    blog(LOG_INFO, "[ShortcutsPortal] Hotkey ID %lu - Registerer is ENCODER, name: %s", (unsigned long)id, name ? name : "nullptr");
                 } else if (type == OBS_HOTKEY_REGISTERER_SERVICE) {
                     name = obs_service_get_name(static_cast<obs_service_t*>(registerer));
-                    blog(LOG_INFO, "[ShortcutsPortal] Hotkey ID %lu - Registerer is SERVICE, name: %s", (unsigned long)id, name ? name : "nullptr");
                 }
                 
                 if (name) {
                     namePrefix = QString::fromUtf8(name);
-                    blog(LOG_INFO, "[ShortcutsPortal] Hotkey ID %lu - Name prefix set to: '%s'", (unsigned long)id, namePrefix.toUtf8().constData());
                 }
             }
 
             if (!namePrefix.isEmpty()) {
                 description = QString("[%1] %2").arg(namePrefix, description);
-                blog(LOG_INFO, "[ShortcutsPortal] Hotkey ID %lu - Final description with prefix: '%s'", (unsigned long)id, description.toUtf8().constData());
             }
 
             // Use the unique ID as the key to avoid collisions (e.g. scenes share the same name)
             // Prefix with "hk_" to ensure it doesn't start with a digit, which is invalid for DBus object path elements
             QString uniqueId = "hk_" + QString::number(id);
-            blog(LOG_INFO, "[ShortcutsPortal] Hotkey ID %lu - Unique ID generated: '%s'", (unsigned long)id, uniqueId.toUtf8().constData());
 
             t->createShortcut(uniqueId, description, [id](bool pressed) {
-                blog(LOG_INFO, "[ShortcutsPortal] Hotkey ID %lu - Triggered (pressed: %s)", (unsigned long)id, pressed ? "true" : "false");
                 obs_hotkey_trigger_routed_callback(id, pressed);
             });
-            blog(LOG_INFO, "[ShortcutsPortal] Hotkey ID %lu - Shortcut created.", (unsigned long)id);
 
             return true;
         },
         this
     );
+    
+    // Clear the temporary pointer set
+    m_currentValidSources = nullptr;
 
     // KDE and Gnome don't allow binding multiple key combinations to the same action like obs does...
     // so add custom "toggle" shortcuts for actions that can be started / stopped
@@ -272,8 +286,6 @@ void ShortcutsPortal::createShortcuts()
         QString id = "scene_" + QCryptographicHash::hash(qName.toUtf8(), QCryptographicHash::Md5).toHex();
 
         QString description = "Switch to scene '" + qName + "'";
-
-        blog(LOG_INFO, "[ShortcutsPortal] Adding scene shortcut: %s (ID: %s)", name, id.toUtf8().constData());
 
         createShortcut(id, description, [qName](bool pressed) {
             if (!pressed)
