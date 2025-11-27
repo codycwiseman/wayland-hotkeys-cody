@@ -25,7 +25,6 @@
 #include <QCryptographicHash>
 #include <QMessageBox>
 #include <QSet>
-#include <QWindow>
 
 #if QT_VERSION >= QT_VERSION_CHECK(6, 9, 0)
 #include <private/qdesktopunixservices_p.h>
@@ -35,11 +34,9 @@
 #include <private/qguiapplication_p.h>
 #include <qpa/qplatformintegration.h>
 
-using namespace Qt::Literals::StringLiterals;
-
-static const QString freedesktopDest = u"org.freedesktop.portal.Desktop"_s;
-static const QString freedesktopPath = u"/org/freedesktop/portal/desktop"_s;
-static const QString globalShortcutsInterface = u"org.freedesktop.portal.GlobalShortcuts"_s;
+static const QString freedesktopDest = QStringLiteral("org.freedesktop.portal.Desktop");
+static const QString freedesktopPath = QStringLiteral("/org/freedesktop/portal/desktop");
+static const QString globalShortcutsInterface = QStringLiteral("org.freedesktop.portal.GlobalShortcuts");
 
 ShortcutsPortal::ShortcutsPortal(QObject* parent)
     : QObject(parent)
@@ -53,21 +50,21 @@ void ShortcutsPortal::createSession()
         freedesktopDest,
         freedesktopPath,
         globalShortcutsInterface,
-        u"CreateSession"_s
+        QStringLiteral("CreateSession")
     );
 
     QList<QVariant> createSessionArgs;
 
     QMap<QString, QVariant> sessionOptions;
-    sessionOptions.insert(u"handle_token"_s, m_handleToken);
-    sessionOptions.insert(u"session_handle_token"_s, m_sessionHandleToken);
+    sessionOptions.insert(QStringLiteral("handle_token"), m_handleToken);
+    sessionOptions.insert(QStringLiteral("session_handle_token"), m_sessionHandleToken);
     createSessionArgs.append(sessionOptions);
     createSessionCall.setArguments(createSessionArgs);
 
     QDBusMessage call = QDBusConnection::sessionBus().call(createSessionCall);
     if (call.type() != QDBusMessage::ReplyMessage) {
         auto errMsg = QMessageBox(m_parentWindow);
-        errMsg.critical(m_parentWindow, u"Failed to create global shortcuts session"_s, call.errorMessage());
+        errMsg.critical(m_parentWindow, QStringLiteral("Failed to create global shortcuts session"), call.errorMessage());
     }
 
     this->m_responseHandle = call.arguments().first().value<QDBusObjectPath>();
@@ -78,8 +75,8 @@ void ShortcutsPortal::createSession()
     QDBusConnection::sessionBus().connect(
         freedesktopDest,
         m_responseHandle.path(),
-        u"org.freedesktop.portal.Request"_s,
-        u"Response"_s,
+        QStringLiteral("org.freedesktop.portal.Request"),
+        QStringLiteral("Response"),
         this,
         SLOT(onCreateSessionResponse(uint, QVariantMap))
     );
@@ -90,11 +87,11 @@ int ShortcutsPortal::getVersion()
     QDBusMessage message = QDBusMessage::createMethodCall(
         freedesktopDest,
         freedesktopPath,
-        u"org.freedesktop.DBus.Properties"_s,
-        u"Get"_s
+        QStringLiteral("org.freedesktop.DBus.Properties"),
+        QStringLiteral("Get")
     );
 
-    message.setArguments({globalShortcutsInterface, u"version"_s});
+    message.setArguments({globalShortcutsInterface, QStringLiteral("version")});
     QDBusMessage reply = QDBusConnection::sessionBus().call(message);
     auto version = reply.arguments().first().value<QDBusVariant>().variant().toUInt();
     return version;
@@ -106,7 +103,7 @@ void ShortcutsPortal::createShortcut(
     const std::function<void(bool)>& callbackFunc
 )
 {
-    m_shortcuts[name] = PortalShortcut{name, description, callbackFunc};
+    m_shortcuts[name] = {name, description, callbackFunc};
 }
 
 void ShortcutsPortal::createShortcuts()
@@ -146,9 +143,9 @@ void ShortcutsPortal::createShortcuts()
             QString qNameStr = nameStr ? QString::fromUtf8(nameStr) : QString();
 
             // Filter out internal scene switching and scene item visibility toggles
-            if (qNameStr == u"OBSBasic.SelectScene"_s || 
-                qNameStr.contains(u"show_scene_item"_s) || 
-                qNameStr.contains(u"hide_scene_item"_s)) {
+            if (qNameStr == QStringLiteral("OBSBasic.SelectScene") || 
+                qNameStr.contains(QStringLiteral("show_scene_item")) || 
+                qNameStr.contains(QStringLiteral("hide_scene_item"))) {
                 return true;
             }
 
@@ -315,8 +312,8 @@ void ShortcutsPortal::createShortcuts()
 
 void ShortcutsPortal::onCreateSessionResponse(uint, const QVariantMap& results)
 {
-    if (results.contains(u"session_handle"_s)) {
-        QString sessionHandle = results[u"session_handle"_s].toString();
+    if (results.contains(QStringLiteral("session_handle"))) {
+        QString sessionHandle = results[QStringLiteral("session_handle")].toString();
         this->m_sessionObjPath = QDBusObjectPath(sessionHandle);
     } else {
         blog(LOG_WARNING, "[ShortcutsPortal] Session creation response did not contain session_handle");
@@ -325,8 +322,8 @@ void ShortcutsPortal::onCreateSessionResponse(uint, const QVariantMap& results)
     QDBusConnection::sessionBus().disconnect(
         freedesktopDest,
         m_responseHandle.path(),
-        u"org.freedesktop.portal.Request"_s,
-        u"Response"_s,
+        QStringLiteral("org.freedesktop.portal.Request"),
+        QStringLiteral("Response"),
         this,
         SLOT(onCreateSessionResponse(uint, QVariantMap))
     );
@@ -335,7 +332,7 @@ void ShortcutsPortal::onCreateSessionResponse(uint, const QVariantMap& results)
         freedesktopDest,
         freedesktopPath,
         globalShortcutsInterface,
-        u"Activated"_s,
+        QStringLiteral("Activated"),
         this,
         SLOT(onActivatedSignal(
             QDBusObjectPath, QString, qulonglong, QVariantMap
@@ -346,7 +343,7 @@ void ShortcutsPortal::onCreateSessionResponse(uint, const QVariantMap& results)
         freedesktopDest,
         freedesktopPath,
         globalShortcutsInterface,
-        u"Deactivated"_s,
+        QStringLiteral("Deactivated"),
         this,
         SLOT(onDeactivatedSignal(
             QDBusObjectPath, QString, qulonglong, QVariantMap
@@ -389,7 +386,7 @@ void ShortcutsPortal::bindShortcuts()
         freedesktopDest,
         freedesktopPath,
         globalShortcutsInterface,
-        u"BindShortcuts"_s
+        QStringLiteral("BindShortcuts")
     );
 
     QList<std::pair<QString, QVariantMap>> shortcuts;
@@ -399,14 +396,14 @@ void ShortcutsPortal::bindShortcuts()
 
         QVariantMap shortcutOptions;
         dbusShortcut.first = shortcut.name;
-        shortcutOptions.insert(u"description"_s, shortcut.description);
+        shortcutOptions.insert(QStringLiteral("description"), shortcut.description);
         dbusShortcut.second = shortcutOptions;
 
         shortcuts.append(dbusShortcut);
     }
 
     QMap<QString, QVariant> bindOptions;
-    bindOptions.insert(u"handle_token"_s, m_handleToken);
+    bindOptions.insert(QStringLiteral("handle_token"), m_handleToken);
 
     QList<QVariant> shortcutArgs;
     shortcutArgs.append(m_sessionObjPath);
@@ -419,7 +416,7 @@ void ShortcutsPortal::bindShortcuts()
     QDBusMessage msg = QDBusConnection::sessionBus().call(bindShortcuts);
     if (msg.type() != QDBusMessage::ReplyMessage) {
         auto errMsg = QMessageBox(m_parentWindow);
-        errMsg.critical(m_parentWindow, u"Failed to bind shortcuts"_s, msg.errorMessage());
+        errMsg.critical(m_parentWindow, QStringLiteral("Failed to bind shortcuts"), msg.errorMessage());
         blog(LOG_ERROR, "[ShortcutsPortal] Failed to bind shortcuts: %s", msg.errorMessage().toUtf8().constData());
     }
 }
@@ -455,11 +452,11 @@ void ShortcutsPortal::configureShortcuts()
         freedesktopDest,
         freedesktopPath,
         globalShortcutsInterface,
-        u"ConfigureShortcuts"_s
+        QStringLiteral("ConfigureShortcuts")
     );
 
     QMap<QString, QVariant> bindOptions;
-    bindOptions.insert(u"handle_token"_s, m_handleToken);
+    bindOptions.insert(QStringLiteral("handle_token"), m_handleToken);
 
     QList<QVariant> shortcutArgs;
     shortcutArgs.append(m_sessionObjPath);
@@ -471,7 +468,7 @@ void ShortcutsPortal::configureShortcuts()
     QDBusMessage msg = QDBusConnection::sessionBus().call(bindShortcuts);
     if (msg.type() != QDBusMessage::ReplyMessage) {
         auto errMsg = QMessageBox(m_parentWindow);
-        errMsg.critical(m_parentWindow, u"Failed to configure shortcuts"_s, msg.errorMessage());
+        errMsg.critical(m_parentWindow, QStringLiteral("Failed to configure shortcuts"), msg.errorMessage());
     }
 }
 
@@ -483,7 +480,7 @@ ShortcutsPortal::~ShortcutsPortal()
         freedesktopDest,
         freedesktopPath,
         globalShortcutsInterface,
-        u"Activated"_s,
+        QStringLiteral("Activated"),
         this,
         SLOT(onActivatedSignal(
             QDBusObjectPath, QString, qulonglong, QVariantMap
@@ -493,7 +490,7 @@ ShortcutsPortal::~ShortcutsPortal()
         freedesktopDest,
         freedesktopPath,
         globalShortcutsInterface,
-        u"Deactivated"_s,
+        QStringLiteral("Deactivated"),
         this,
         SLOT(onDeactivatedSignal(
             QDBusObjectPath, QString, qulonglong, QVariantMap
