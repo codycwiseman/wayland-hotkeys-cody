@@ -71,7 +71,7 @@ void ShortcutsPortal::createSession()
 
     this->m_responseHandle = call.arguments().first().value<QDBusObjectPath>();
 
-    qDBusRegisterMetaType<std::pair<QString, QVariantMap>>();
+    qDBusRegisterMetaType<QPair<QString, QVariantMap>>();
     qDBusRegisterMetaType<QList<QPair<QString, QVariantMap>>>();
 
     QDBusConnection::sessionBus().connect(
@@ -119,7 +119,8 @@ void ShortcutsPortal::createShortcuts()
             auto description = obs_hotkey_get_description(binding);
 
             // Use the unique ID as the key to avoid collisions (e.g. scenes share the same name)
-            QString uniqueId = QString::number(id);
+            // Prefix with "hk_" to ensure it doesn't start with a digit, which is invalid for DBus object path elements
+            QString uniqueId = "hk_" + QString::number(id);
 
             t->createShortcut(uniqueId, description, [id](bool pressed) {
                 obs_hotkey_trigger_routed_callback(id, pressed);
@@ -212,6 +213,9 @@ void ShortcutsPortal::createShortcuts()
         obs_source_t* source = scenes.sources.array[i];
         const char* name = obs_source_get_name(source);
         QString qName = QString::fromUtf8(name);
+
+        if (qName.isEmpty())
+            continue;
 
         QString id = "scene_" + qName;
         id.replace(QRegularExpression(u"[^a-zA-Z0-9_]"_s), u"_"_s);
