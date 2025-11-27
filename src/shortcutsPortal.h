@@ -89,4 +89,6 @@ private:
 
     QDBusObjectPath m_responseHandle;
     QDBusObjectPath m_sessionObjPath;
+
+    bool m_isLoaded = false;
 };

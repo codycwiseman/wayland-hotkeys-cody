@@ -285,8 +285,12 @@ void ShortcutsPortal::onCreateSessionResponse(unsigned int, const QVariantMap& r
         ))
     );
 
-    createShortcuts();
-    bindShortcuts();
+    if (m_isLoaded) {
+        createShortcuts();
+        bindShortcuts();
+    } else {
+        blog(LOG_INFO, "[ShortcutsPortal] Deferring shortcut binding until OBS finishes loading");
+    }
 }
 
 void ShortcutsPortal::onActivatedSignal(
@@ -437,6 +441,11 @@ ShortcutsPortal::~ShortcutsPortal()
 void ShortcutsPortal::obsFrontendEvent(enum obs_frontend_event event, void* private_data)
 {
     auto* portal = static_cast<ShortcutsPortal*>(private_data);
+
+    if (event == OBS_FRONTEND_EVENT_FINISHED_LOADING) {
+        portal->m_isLoaded = true;
+    }
+
     if (event == OBS_FRONTEND_EVENT_SCENE_LIST_CHANGED ||
         event == OBS_FRONTEND_EVENT_FINISHED_LOADING ||
         event == OBS_FRONTEND_EVENT_SCENE_COLLECTION_CHANGED ||
@@ -444,7 +453,7 @@ void ShortcutsPortal::obsFrontendEvent(enum obs_frontend_event event, void* priv
         
         blog(LOG_INFO, "[ShortcutsPortal] Frontend event received: %d", event);
 
-        if (!portal->m_sessionObjPath.path().isEmpty()) {
+        if (portal->m_isLoaded && !portal->m_sessionObjPath.path().isEmpty()) {
             // Use invokeMethod to ensure we run on the main thread's event loop
             // and avoid potential race conditions during state changes.
             QMetaObject::invokeMethod(portal, [portal]() {
@@ -452,7 +461,7 @@ void ShortcutsPortal::obsFrontendEvent(enum obs_frontend_event event, void* priv
                 portal->bindShortcuts();
             }, Qt::QueuedConnection);
         } else {
-            blog(LOG_INFO, "[ShortcutsPortal] Ignoring event, session not yet created");
+            blog(LOG_INFO, "[ShortcutsPortal] Ignoring event, session not yet created or OBS not loaded");
         }
     }
 }
