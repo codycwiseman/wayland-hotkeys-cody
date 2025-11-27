@@ -120,7 +120,27 @@ void ShortcutsPortal::createShortcuts()
         [](void* data, obs_hotkey_id id, obs_hotkey_t* binding) {
             auto t = static_cast<ShortcutsPortal*>(data);
 
-            auto description = obs_hotkey_get_description(binding);
+            QString description = QString::fromUtf8(obs_hotkey_get_description(binding));
+
+            QString namePrefix;
+            obs_hotkey_registerer_type type = obs_hotkey_get_registerer_type(binding);
+            void* registerer = obs_hotkey_get_registerer(binding);
+
+            if (registerer) {
+                if (type == OBS_HOTKEY_REGISTERER_SOURCE) {
+                    namePrefix = QString::fromUtf8(obs_source_get_name(static_cast<obs_source_t*>(registerer)));
+                } else if (type == OBS_HOTKEY_REGISTERER_OUTPUT) {
+                    namePrefix = QString::fromUtf8(obs_output_get_name(static_cast<obs_output_t*>(registerer)));
+                } else if (type == OBS_HOTKEY_REGISTERER_ENCODER) {
+                    namePrefix = QString::fromUtf8(obs_encoder_get_name(static_cast<obs_encoder_t*>(registerer)));
+                } else if (type == OBS_HOTKEY_REGISTERER_SERVICE) {
+                    namePrefix = QString::fromUtf8(obs_service_get_name(static_cast<obs_service_t*>(registerer)));
+                }
+            }
+
+            if (!namePrefix.isEmpty()) {
+                description = QString("[%1] %2").arg(namePrefix, description);
+            }
 
             // Use the unique ID as the key to avoid collisions (e.g. scenes share the same name)
             // Prefix with "hk_" to ensure it doesn't start with a digit, which is invalid for DBus object path elements
