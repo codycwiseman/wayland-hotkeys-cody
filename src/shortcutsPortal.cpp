@@ -138,7 +138,6 @@ void ShortcutsPortal::createShortcuts()
     obs_enum_hotkeys(
         [](void* data, obs_hotkey_id id, obs_hotkey_t* binding) {
             auto t = static_cast<ShortcutsPortal*>(data);
-            auto t = static_cast<ShortcutsPortal*>(data);
             auto* validSources = static_cast<QSet<void*>*>(t->m_currentValidSources);
 
             const char* nameStr = obs_hotkey_get_name(binding);
