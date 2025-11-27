@@ -90,7 +90,7 @@ int ShortcutsPortal::getVersion()
     QDBusMessage reply = QDBusConnection::sessionBus().call(message);
     auto version = reply.arguments().first().value<QDBusVariant>().variant().toUInt();
     return version;
-};
+}
 
 void ShortcutsPortal::createShortcut(
     const QString& name,
@@ -98,12 +98,8 @@ void ShortcutsPortal::createShortcut(
     const std::function<void(bool pressed)>& callback
 )
 {
-    m_shortcuts[name] = {
-        .name = name,
-        .description = description,
-        .callback = callback
-    };
-};
+    m_shortcuts[name] = PortalShortcut{name, description, callback};
+}
 
 void ShortcutsPortal::createShortcuts()
 {
@@ -267,7 +263,7 @@ void ShortcutsPortal::onCreateSessionResponse(uint, const QVariantMap& results)
 
     createShortcuts();
     bindShortcuts();
-};
+}
 
 void ShortcutsPortal::onActivatedSignal(
     const QDBusObjectPath&,
@@ -279,7 +275,7 @@ void ShortcutsPortal::onActivatedSignal(
     if (m_shortcuts.contains(shortcutName)) {
         m_shortcuts[shortcutName].callback(true);
     }
-};
+}
 
 void ShortcutsPortal::onDeactivatedSignal(
     const QDBusObjectPath&,
@@ -291,7 +287,7 @@ void ShortcutsPortal::onDeactivatedSignal(
     if (m_shortcuts.contains(shortcutName)) {
         m_shortcuts[shortcutName].callback(false);
     }
-};
+}
 
 void ShortcutsPortal::bindShortcuts()
 {
@@ -331,7 +327,7 @@ void ShortcutsPortal::bindShortcuts()
         auto errMsg = QMessageBox(m_parentWindow);
         errMsg.critical(m_parentWindow, u"Failed to bind shortcuts"_s, msg.errorMessage());
     }
-};
+}
 
 QString ShortcutsPortal::getWindowId()
 {
@@ -382,7 +378,7 @@ void ShortcutsPortal::configureShortcuts()
         auto errMsg = QMessageBox(m_parentWindow);
         errMsg.critical(m_parentWindow, u"Failed to configure shortcuts"_s, msg.errorMessage());
     }
-};
+}
 
 ShortcutsPortal::~ShortcutsPortal()
 {

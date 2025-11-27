@@ -25,7 +25,7 @@
 #include <obs-frontend-api.h>
 #include <obs-hotkey.h>
 
-struct Shortcut
+struct PortalShortcut
 {
     QString name;
     QString description;
@@ -60,7 +60,7 @@ public:
     }
 
 public Q_SLOTS:
-    void onCreateSessionResponse(uint, const QVariantMap& results);
+    void onCreateSessionResponse(uint response, const QVariantMap& results);
 
     void onActivatedSignal(
         const QDBusObjectPath& sessionHandle,
@@ -79,7 +79,7 @@ public Q_SLOTS:
 private:
     QString getWindowId();
 
-    QMap<QString, Shortcut> m_shortcuts;
+    QMap<QString, PortalShortcut> m_shortcuts;
 
     const QString m_handleToken = "obs_portal_shortcuts";
     const QString m_sessionHandleToken = "obs_portal_shortcuts_session";
